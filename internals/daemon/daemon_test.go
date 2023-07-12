@@ -29,8 +29,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gorilla/mux"
-
 	"gopkg.in/check.v1"
 
 	// XXX Delete import above and make this file like the other ones.
@@ -43,6 +41,7 @@ import (
 	"github.com/canonical/pebble/internals/overlord/state"
 	"github.com/canonical/pebble/internals/systemd"
 	"github.com/canonical/pebble/internals/testutil"
+	chi "github.com/go-chi/chi/v5"
 )
 
 // Hook up check.v1 into the "go test" runner
@@ -408,8 +407,8 @@ func (s *daemonSuite) TestAddRoutes(c *check.C) {
 	}
 
 	got := make([]string, 0, len(api))
-	c.Assert(d.router.Walk(func(route *mux.Route, router *mux.Router, ancestors []*mux.Route) error {
-		got = append(got, route.GetName())
+	c.Assert(chi.Walk(d.router, func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+		got = append(got, route)
 		return nil
 	}), check.IsNil)
 

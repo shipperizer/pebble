@@ -33,8 +33,6 @@ import (
 
 	"gopkg.in/tomb.v2"
 
-	"github.com/gorilla/mux"
-
 	"github.com/canonical/pebble/internals/logger"
 	"github.com/canonical/pebble/internals/osutil"
 	"github.com/canonical/pebble/internals/osutil/sys"
@@ -45,6 +43,8 @@ import (
 	"github.com/canonical/pebble/internals/overlord/standby"
 	"github.com/canonical/pebble/internals/overlord/state"
 	"github.com/canonical/pebble/internals/systemd"
+
+	chi "github.com/go-chi/chi/v5"
 )
 
 var (
@@ -90,7 +90,7 @@ type Daemon struct {
 	connTracker         *connTracker
 	serve               *http.Server
 	tomb                tomb.Tomb
-	router              *mux.Router
+	router              *chi.Mux
 	standbyOpinions     *standby.StandbyOpinions
 
 	// set to remember we need to restart the system
@@ -400,20 +400,20 @@ func (d *Daemon) SetDegradedMode(err error) {
 }
 
 func (d *Daemon) addRoutes() {
-	d.router = mux.NewRouter()
+	d.router = chi.NewMux()
 
 	for _, c := range api {
 		c.d = d
 		if c.PathPrefix == "" {
-			d.router.Handle(c.Path, c).Name(c.Path)
+			d.router.Handle(c.Path, c)
 		} else {
-			d.router.PathPrefix(c.PathPrefix).Handler(c).Name(c.PathPrefix)
+			d.router.Handle(c.PathPrefix, c)
 		}
 	}
 
 	// also maybe add a /favicon.ico handler...
 
-	d.router.NotFoundHandler = statusNotFound("invalid API endpoint requested")
+	d.router.NotFound(statusNotFound("invalid API endpoint requested").ServeHTTP)
 }
 
 type connTracker struct {

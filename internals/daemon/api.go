@@ -17,11 +17,10 @@ package daemon
 import (
 	"net/http"
 
-	"github.com/gorilla/mux"
-
 	"github.com/canonical/pebble/internals/overlord"
 	"github.com/canonical/pebble/internals/overlord/restart"
 	"github.com/canonical/pebble/internals/overlord/state"
+	"github.com/go-chi/chi"
 )
 
 var api = []*Command{{
@@ -104,7 +103,8 @@ var (
 
 	overlordServiceManager = (*overlord.Overlord).ServiceManager
 
-	muxVars = mux.Vars
+	// TODO @shipperizer change name
+	muxVars = URLParams
 )
 
 func v1SystemInfo(c *Command, r *http.Request, _ *userState) Response {
@@ -116,4 +116,17 @@ func v1SystemInfo(c *Command, r *http.Request, _ *userState) Response {
 		"boot-id": restart.BootID(state),
 	}
 	return SyncResponse(result)
+}
+
+// stealing https://github.com/go-chi/chi/blob/v5.0.8/context.go#L10C1-L15C2 and make it work as mux.Vars jjust for now
+func URLParams(r *http.Request) map[string]string {
+	if rctx := chi.RouteContext(r.Context()); rctx != nil {
+		m := make(map[string]string)
+		for i, k := range rctx.URLParams.Keys {
+			m[k] = rctx.URLParams.Values[i]
+		}
+
+		return m
+	}
+	return nil
 }
